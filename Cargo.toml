@@ -8,3 +8,5 @@ edition = "2018"
 [dependencies]
 structopt = "0.3"
 anyhow = "1"
+niffler = "2.3"
+noodles-fasta = "0.3"

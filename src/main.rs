@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
+use noodles_fasta as fasta;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
-use std::io::{stdout, BufWriter, Write};
+use std::io::{stdout, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -42,6 +43,15 @@ fn main() -> Result<()> {
 
     for p in opt.alignments {
         println!("{:?}", p);
+        let mut reader = niffler::from_path(p)
+            .map(|(r, _)| BufReader::new(r))
+            .map(fasta::Reader::new)
+            .context("Could not open alignment file")?;
+
+        for result in reader.records() {
+            let record = result?;
+            writeln!(&mut ostream, "{}", record.sequence().len())?;
+        }
     }
 
     Ok(())
