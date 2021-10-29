@@ -1,9 +1,10 @@
-use anyhow::{anyhow, Context, Result};
-use noodles_fasta as fasta;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
-use std::io::{stdout, BufReader, BufWriter, Write};
+use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
+
+use anyhow::{anyhow, Context, Result};
+use noodles_fasta as fasta;
 use structopt::StructOpt;
 
 /// A utility function that allows the CLI to error if a path doesn't exist
@@ -47,21 +48,7 @@ fn main() -> Result<()> {
         .map(fasta::Reader::new)
         .context("Could not open first alignment file")?;
 
-    let mut names1: Vec<String> = vec![];
-    let mut seqs1: Vec<Vec<u8>> = vec![];
-    let mut seqlen: usize = 0;
-    for result in reader1.records() {
-        let record = result.context("Failed to parse record")?;
-        names1.push(record.name().to_owned());
-        if seqlen > 0 && seqlen != record.sequence().len() {
-            return Err(anyhow!(
-                "Alignment sequences must all be the same length".to_string()
-            ));
-        } else if seqlen == 0 {
-            seqlen = record.sequence().len();
-        }
-        seqs1.push(record.sequence().to_vec());
-    }
+    let (names1, seqs1) = load_alignment(&mut reader1)?;
 
     for n in names1 {
         writeln!(&mut ostream, "{}", n)?;
@@ -71,13 +58,38 @@ fn main() -> Result<()> {
         writeln!(&mut ostream, "{}", s.len())?;
     }
 
+    
+
     Ok(())
+}
+
+fn load_alignment<R: BufRead>(
+    reader: &mut fasta::Reader<R>,
+) -> Result<(Vec<String>, Vec<Vec<u8>>), anyhow::Error> {
+    let mut seqlen: usize = 0;
+    let mut names: Vec<String> = vec![];
+    let mut seqs: Vec<Vec<u8>> = vec![];
+
+    for result in reader.records() {
+        let record = result.context("Failed to parse record")?;
+        names.push(record.name().to_owned());
+        if seqlen > 0 && seqlen != record.sequence().len() {
+            return Err(anyhow!(
+                "Alignment sequences must all be the same length".to_string()
+            ));
+        } else if seqlen == 0 {
+            seqlen = record.sequence().len();
+        }
+        seqs.push(record.sequence().to_vec());
+    }
+    Ok((names, seqs))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::ffi::OsStr;
+
+    use super::*;
 
     #[test]
     fn check_path_exists_it_doesnt() {
