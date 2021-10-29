@@ -127,4 +127,36 @@ mod tests {
         let expected = PathBuf::from("Cargo.toml");
         assert_eq!(actual, expected)
     }
+
+    #[test]
+    fn alignments_all_have_same_length() {
+        let data = b">s0\nACGT\n>s1\nCCCC\n";
+        let mut reader = fasta::Reader::new(&data[..]);
+
+        let actual = load_alignment(&mut reader, 0).unwrap();
+        let expected = (
+            vec!["s0".to_string(), "s1".to_string()],
+            vec![b"ACGT".to_vec(), b"CCCC".to_vec()],
+        );
+
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn alignments_do_not_all_have_same_length() {
+        let data = b">s0\nACGT\n>s1\nCCCCC\n";
+        let mut reader = fasta::Reader::new(&data[..]);
+
+        let actual = load_alignment(&mut reader, 0).unwrap_err();
+        assert!(actual.to_string().contains("[id: s1]"))
+    }
+
+    #[test]
+    fn alignments_do_not_have_same_length_as_starting_seqlen() {
+        let data = b">s0\nACGT\n>s1\nCCCC\n";
+        let mut reader = fasta::Reader::new(&data[..]);
+
+        let actual = load_alignment(&mut reader, 1).unwrap_err();
+        assert!(actual.to_string().contains("[id: s0]"))
+    }
 }
