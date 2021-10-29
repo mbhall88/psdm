@@ -48,25 +48,48 @@ fn main() -> Result<()> {
         .map(fasta::Reader::new)
         .context("Could not open first alignment file")?;
 
-    let (names1, seqs1) = load_alignment(&mut reader1)?;
+    let (names1, seqs1) =
+        load_alignment(&mut reader1, 0).context("Failed to load first alignment file")?;
 
-    for n in names1 {
+    for n in &names1 {
         writeln!(&mut ostream, "{}", n)?;
     }
 
-    for s in seqs1 {
+    for s in &seqs1 {
         writeln!(&mut ostream, "{}", s.len())?;
     }
 
-    
+    let (names2, seqs2) = match opt.alignments.get(1) {
+        Some(p) => {
+            let mut reader2 = niffler::from_path(&p)
+                .map(|(r, _)| BufReader::new(r))
+                .map(fasta::Reader::new)
+                .context("Could not open second alignment file")?;
+            let (n, s) = load_alignment(&mut reader2, seqs1[0].len())
+                .context("Failed to load second alignment file")?;
+            (Some(n), Some(s))
+        }
+        None => (None, None),
+    };
+
+    if let (Some(ns), Some(ss)) = (names2, seqs2) {
+        for n in ns {
+            writeln!(&mut ostream, "{}", n)?;
+        }
+
+        for s in ss {
+            writeln!(&mut ostream, "{}", s.len())?;
+        }
+    }
 
     Ok(())
 }
 
 fn load_alignment<R: BufRead>(
     reader: &mut fasta::Reader<R>,
+    starting_seqlen: usize,
 ) -> Result<(Vec<String>, Vec<Vec<u8>>), anyhow::Error> {
-    let mut seqlen: usize = 0;
+    let mut seqlen: usize = starting_seqlen;
     let mut names: Vec<String> = vec![];
     let mut seqs: Vec<Vec<u8>> = vec![];
 
@@ -74,9 +97,10 @@ fn load_alignment<R: BufRead>(
         let record = result.context("Failed to parse record")?;
         names.push(record.name().to_owned());
         if seqlen > 0 && seqlen != record.sequence().len() {
-            return Err(anyhow!(
-                "Alignment sequences must all be the same length".to_string()
-            ));
+            return Err(anyhow!(format!(
+                "Alignment sequences must all be the same length [id: {}]",
+                record.name()
+            )));
         } else if seqlen == 0 {
             seqlen = record.sequence().len();
         }
