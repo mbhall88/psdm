@@ -1,0 +1,6 @@
+.git*
+target/
+tmp*/
+ci
+codecov.yaml
+.ide*
