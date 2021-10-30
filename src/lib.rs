@@ -5,6 +5,8 @@ use std::io::BufRead;
 use std::iter::FromIterator;
 use structopt::StructOpt;
 
+const IGNORE: u8 = b'.';
+
 trait SortExt<T> {
     fn argsort(&self) -> Vec<usize>;
     fn sort_by_indices(&mut self, indices: &mut Vec<usize>);
@@ -49,6 +51,9 @@ pub struct Transformer {
     #[structopt(short, long)]
     sort: bool,
     /// String of characters to ignore - e.g., `-e NX` -> dist(A, N) = 0 and dist(A, X) = 0
+    ///
+    /// Note, this option is applied *after* `--ignore-case` - i.e., if using `--ignore-case`, only
+    /// the uppercase form of a character is needed.
     #[structopt(short = "e", long, default_value="N", parse(from_str=parse_ignored_chars))]
     ignored_chars: HashSet<u8>,
 }
@@ -83,7 +88,25 @@ impl Transformer {
             seqs.sort_by_indices(&mut indices);
         }
 
+        let skip_transform = self.ignored_chars.is_empty() && !self.ignore_case;
+        if !skip_transform {
+            for seq in seqs.iter_mut() {
+                self.transform(seq);
+            }
+        }
+
         Ok((names, seqs))
+    }
+
+    fn transform(&self, seq: &mut Vec<u8>) {
+        for b in seq {
+            if self.ignore_case {
+                b.make_ascii_uppercase();
+            }
+            if self.ignored_chars.contains(b) {
+                *b = IGNORE.to_owned();
+            }
+        }
     }
 }
 #[cfg(test)]
@@ -181,5 +204,76 @@ mod tests {
         v.sort_by_indices(&mut i);
 
         assert_eq!(v, &["f", "d", "c", "b", "g", "e", "a"]);
+    }
+
+    #[test]
+    fn transform_preserve_case() {
+        let mut s = b"aC-t".to_vec();
+        let expected = s.clone();
+        let t = Transformer::default();
+
+        t.transform(&mut s);
+
+        assert_eq!(s, expected)
+    }
+
+    #[test]
+    fn transform_ignore_case() {
+        let mut s = b"aC-t".to_vec();
+        let t = Transformer {
+            ignore_case: true,
+            ..Default::default()
+        };
+
+        t.transform(&mut s);
+        let expected = b"AC-T".to_vec();
+
+        assert_eq!(s, expected)
+    }
+
+    #[test]
+    fn transform_ignore_chars() {
+        let ignore = HashSet::from_iter(b"N-x".to_vec());
+        let t = Transformer {
+            ignored_chars: ignore,
+            ..Default::default()
+        };
+        let mut s = b"AxC-GNt".to_vec();
+
+        t.transform(&mut s);
+        let expected = vec![b'A', IGNORE, b'C', IGNORE, b'G', IGNORE, b't'];
+
+        assert_eq!(s, expected)
+    }
+
+    #[test]
+    fn transform_ignore_chars_case_sensitive() {
+        let ignore = HashSet::from_iter(b"N".to_vec());
+        let t = Transformer {
+            ignored_chars: ignore,
+            ..Default::default()
+        };
+        let mut s = b"ACGnt".to_vec();
+
+        t.transform(&mut s);
+        let expected = vec![b'A', b'C', b'G', b'n', b't'];
+
+        assert_eq!(s, expected)
+    }
+
+    #[test]
+    fn transform_ignore_chars_case_insensitive() {
+        let ignore = HashSet::from_iter(b"N".to_vec());
+        let t = Transformer {
+            ignored_chars: ignore,
+            ignore_case: true,
+            ..Default::default()
+        };
+        let mut s = b"ACGnt".to_vec();
+
+        t.transform(&mut s);
+        let expected = vec![b'A', b'C', b'G', IGNORE, b'T'];
+
+        assert_eq!(s, expected)
     }
 }
