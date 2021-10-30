@@ -113,9 +113,9 @@ fn load_alignment<R: BufRead>(
     }
 
     if sort {
-        let idx = names.argsort();
+        let mut indices = names.argsort();
         names.sort();
-        seqs.sort_by_index(&idx);
+        seqs.sort_by_indices(&mut indices);
     }
 
     Ok((names, seqs))
@@ -123,7 +123,7 @@ fn load_alignment<R: BufRead>(
 
 trait SortExt<T> {
     fn argsort(&self) -> Vec<usize>;
-    fn sort_by_index(&mut self, indices: &[usize]);
+    fn sort_by_indices(&mut self, indices: &mut Vec<usize>);
 }
 
 impl<T: Ord + Clone> SortExt<T> for Vec<T> {
@@ -133,8 +133,21 @@ impl<T: Ord + Clone> SortExt<T> for Vec<T> {
         indices
     }
 
-    fn sort_by_index(&mut self, indices: &[usize]) {
-        *self = indices.iter().map(|&x| self[x].clone()).collect::<Vec<T>>();
+    fn sort_by_indices(&mut self, indices: &mut Vec<usize>) {
+        for idx in 0..self.len() {
+            if indices[idx] != usize::MAX {
+                let mut current_idx = idx;
+                loop {
+                    let target_idx = indices[current_idx];
+                    indices[current_idx] = usize::MAX;
+                    if indices[target_idx] == usize::MAX {
+                        break;
+                    }
+                    self.swap(current_idx, target_idx);
+                    current_idx = target_idx;
+                }
+            }
+        }
     }
 }
 
@@ -225,10 +238,10 @@ mod tests {
 
     #[test]
     fn sort_by_index() {
-        let i = vec![0, 3, 2, 1];
-        let mut v = vec!["a", "b", "c", "d"];
-        v.sort_by_index(&i);
+        let mut i = vec![5, 3, 2, 1, 6, 4, 0];
+        let mut v = vec!["a", "b", "c", "d", "e", "f", "g"];
+        v.sort_by_indices(&mut i);
 
-        assert_eq!(v, &["a", "d", "c", "b"]);
+        assert_eq!(v, &["f", "d", "c", "b", "g", "e", "a"]);
     }
 }
