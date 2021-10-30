@@ -41,7 +41,7 @@ fn parse_ignored_chars(s: &str) -> HashSet<u8> {
     HashSet::from_iter(s.as_bytes().to_vec())
 }
 
-/// A struct to hold all of the options for the transforming sequences
+// A struct to hold all of the options for the transforming sequences
 #[derive(StructOpt, Debug, Default)]
 pub struct Transformer {
     /// Ignore case - i.e., dist(a, A) = 0

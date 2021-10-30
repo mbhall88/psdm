@@ -20,7 +20,9 @@ fn path_exists<S: AsRef<OsStr> + ?Sized>(s: &S) -> Result<PathBuf, OsString> {
     }
 }
 
+/// Compute a pairwise SNP distance matrix from one or two alignment(s)
 #[derive(StructOpt, Debug)]
+#[structopt()]
 struct Opt {
     /// Alignment file(s) to compute the pairwise distance for.
     ///
