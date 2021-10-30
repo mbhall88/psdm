@@ -88,3 +88,5 @@ fn alignment_files_do_not_have_same_length() -> Result<(), Box<dyn std::error::E
 
     Ok(())
 }
+
+// todo: add integration tests for distance matrices

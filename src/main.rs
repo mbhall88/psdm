@@ -44,7 +44,7 @@ struct Opt {
 
 fn main() -> Result<()> {
     let opts = Opt::from_args();
-
+    // todo: add logging
     // set the global default number of threads for rayon
     rayon::ThreadPoolBuilder::new()
         .num_threads(opts.threads)
@@ -102,6 +102,7 @@ fn main() -> Result<()> {
         })
         .collect::<Vec<u64>>();
 
+    // todo: convert distances into csv
     writeln!(&mut ostream, "{}", format!("{:?}", dists))?;
 
     Ok(())
