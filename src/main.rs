@@ -1,3 +1,5 @@
+use itertools::iproduct;
+use rayon::prelude::*;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io::{stdout, BufReader, BufWriter, Write};
@@ -5,7 +7,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use noodles_fasta as fasta;
-use psdm::Transformer;
+use psdm::{hamming_distance, Transformer};
 use structopt::StructOpt;
 
 /// A utility function that allows the CLI to error if a path doesn't exist
@@ -32,14 +34,23 @@ struct Opt {
     #[structopt(short, long, parse(from_os_str))]
     output: Option<PathBuf>,
 
+    /// Number of threads to use. Setting to 0 will use all available
+    #[structopt(short, long, default_value = "1")]
+    threads: usize,
+
     #[structopt(flatten)]
     transformer: Transformer,
 }
 
 fn main() -> Result<()> {
-    let opt = Opt::from_args();
+    let opts = Opt::from_args();
 
-    let mut ostream: Box<dyn Write> = match opt.output {
+    // set the global default number of threads for rayon
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(opts.threads)
+        .build_global()?;
+
+    let mut ostream: Box<dyn Write> = match opts.output {
         None => Box::new(stdout()),
         Some(p) => {
             let file = File::create(p).context("Failed to create output file")?;
@@ -47,31 +58,23 @@ fn main() -> Result<()> {
         }
     };
 
-    let mut reader1 = niffler::from_path(&opt.alignments[0])
+    let mut reader1 = niffler::from_path(&opts.alignments[0])
         .map(|(r, _)| BufReader::new(r))
         .map(fasta::Reader::new)
         .context("Could not open first alignment file")?;
 
-    let (names1, seqs1) = opt
+    let (_names1, seqs1) = opts
         .transformer
         .load_alignment(&mut reader1, 0)
         .context("Failed to load first alignment file")?;
 
-    for n in &names1 {
-        writeln!(&mut ostream, "{}", n)?;
-    }
-
-    for s in &seqs1 {
-        writeln!(&mut ostream, "{}", s.len())?;
-    }
-
-    let (names2, seqs2) = match opt.alignments.get(1) {
+    let (_names2, seqs2) = match opts.alignments.get(1) {
         Some(p) => {
             let mut reader2 = niffler::from_path(&p)
                 .map(|(r, _)| BufReader::new(r))
                 .map(fasta::Reader::new)
                 .context("Could not open second alignment file")?;
-            let (n, s) = opt
+            let (n, s) = opts
                 .transformer
                 .load_alignment(&mut reader2, seqs1[0].len())
                 .context("Failed to load second alignment file")?;
@@ -80,15 +83,26 @@ fn main() -> Result<()> {
         None => (None, None),
     };
 
-    if let (Some(ns), Some(ss)) = (names2, seqs2) {
-        for n in ns {
-            writeln!(&mut ostream, "{}", n)?;
-        }
+    let n_seqs1 = seqs1.len();
+    let n_seqs2 = match seqs2 {
+        None => n_seqs1,
+        Some(ref s) => s.len(),
+    };
 
-        for s in ss {
-            writeln!(&mut ostream, "{}", s.len())?;
-        }
-    }
+    let pairwise_indices: Vec<(usize, usize)> = iproduct!(0..n_seqs1, 0..n_seqs2).collect();
+
+    let dists = pairwise_indices
+        .into_par_iter()
+        .map(|(i, j)| {
+            match &seqs2 {
+                None if i == j => 0, // distance between a sequence and itself
+                None => hamming_distance(&seqs1[i], &seqs1[j]),
+                Some(ref s) => hamming_distance(&seqs1[i], &s[j]),
+            }
+        })
+        .collect::<Vec<u64>>();
+
+    writeln!(&mut ostream, "{}", format!("{:?}", dists))?;
 
     Ok(())
 }

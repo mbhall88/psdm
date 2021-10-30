@@ -109,6 +109,15 @@ impl Transformer {
         }
     }
 }
+
+fn dist(a: u8, b: u8) -> u64 {
+    (a != b && a != IGNORE && b != IGNORE) as u64
+}
+
+pub fn hamming_distance(a: &[u8], b: &[u8]) -> u64 {
+    a.iter().zip(b).fold(0, |acc, (x, y)| acc + dist(*x, *y))
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -275,5 +284,16 @@ mod tests {
         let expected = vec![b'A', b'C', b'G', IGNORE, b'T'];
 
         assert_eq!(s, expected)
+    }
+
+    #[test]
+    fn test_hamming_distance() {
+        let a = vec![b'A', IGNORE, b't', b'C', b'-'];
+        let b = vec![b'A', b'T', b'T', b'C', b'G'];
+
+        let actual = hamming_distance(&a, &b);
+        let expected = 2;
+
+        assert_eq!(actual, expected)
     }
 }

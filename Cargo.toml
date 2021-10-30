@@ -10,6 +10,8 @@ structopt = "0.3"
 anyhow = "1"
 niffler = "2.3"
 noodles-fasta = "0.3"
+itertools = "0.10"
+rayon = "1.5"
 
 [dev-dependencies]
 assert_cmd = "2"
