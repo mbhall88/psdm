@@ -1,9 +1,10 @@
-use itertools::iproduct;
+use itertools::{iproduct, Itertools};
 use rayon::prelude::*;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io::{stdout, BufReader, BufWriter, Write};
 use std::path::PathBuf;
+use ndarray::Array;
 
 use anyhow::{Context, Result};
 use noodles_fasta as fasta;
@@ -40,6 +41,13 @@ struct Opt {
     #[structopt(short, long, default_value = "1")]
     threads: usize,
 
+    /// Output as long-form ("melted") table
+    ///
+    /// By default the output is a N x N or N x M table where N is the number of sequences in the
+    /// first alignment and M is the number of sequences in the (optional) second alignment.
+    #[structopt(short, long = "long")]
+    long_form: bool,
+
     #[structopt(flatten)]
     transformer: Transformer,
 }
@@ -65,12 +73,12 @@ fn main() -> Result<()> {
         .map(fasta::Reader::new)
         .context("Could not open first alignment file")?;
 
-    let (_names1, seqs1) = opts
+    let (names1, seqs1) = opts
         .transformer
         .load_alignment(&mut reader1, 0)
         .context("Failed to load first alignment file")?;
 
-    let (_names2, seqs2) = match opts.alignments.get(1) {
+    let (names2, seqs2) = match opts.alignments.get(1) {
         Some(p) => {
             let mut reader2 = niffler::from_path(&p)
                 .map(|(r, _)| BufReader::new(r))
@@ -86,26 +94,60 @@ fn main() -> Result<()> {
     };
 
     let n_seqs1 = seqs1.len();
-    let n_seqs2 = match seqs2 {
-        None => n_seqs1,
+    let n_seqs2: usize = match seqs2 {
+        None => 0,
         Some(ref s) => s.len(),
     };
 
-    let pairwise_indices: Vec<(usize, usize)> = iproduct!(0..n_seqs1, 0..n_seqs2).collect();
+    // for intra-alignment distances, we don't need to compute the whole NxN matrix so we just
+    // generate the lower-left triangle (and the diagonal for labelling reasons).
+    let pairwise_indices: Vec<Vec<usize>> = match n_seqs2 {
+        0 => (0..n_seqs1).combinations_with_replacement(2).collect(),
+        i => iproduct!(0..n_seqs1, 0..i)
+            .map(|t| vec![t.0, t.1])
+            .collect(),
+    };
 
-    let dists = pairwise_indices
+    let dists: Vec<u64> = pairwise_indices.as_slice()
         .into_par_iter()
-        .map(|(i, j)| {
+        .map(|ix| {
+            let i = ix[0];
+            let j = ix[1];
             match &seqs2 {
                 None if i == j => 0, // distance between a sequence and itself
                 None => hamming_distance(&seqs1[i], &seqs1[j]),
                 Some(ref s) => hamming_distance(&seqs1[i], &s[j]),
             }
         })
-        .collect::<Vec<u64>>();
+        .collect();
 
-    // todo: convert distances into csv
-    writeln!(&mut ostream, "{}", format!("{:?}", dists))?;
+    let matrix = if n_seqs2 > 0 {
+        Array::from_shape_vec((n_seqs1, n_seqs2), dists).context("Failed to create matrix. This shouldn't happen, please raise an issue on GitHub")?
+    } else {
+        let mut mtx = Array::zeros((n_seqs1, n_seqs1));
+        for (ix, d) in pairwise_indices.iter().zip(dists) {
+            let i = ix[0];
+            let j = ix[1];
+            mtx[[i, j]] = d;
+            if i != j {
+                mtx[[j, i]] = d;
+            }
+        }
+        mtx
+    };
+
+    let row_names  = match &names2 {
+        Some(n) => n,
+        None => &names1
+    };
+    let col_names = &names1;
+    // todo write col names
+    for ((i, j), d) in matrix.indexed_iter() {
+        let c_name = &col_names[j];
+        let r_name = &row_names[i];
+        // todo: write csv
+        writeln!(&mut ostream, "{}", format!("{}\t{}\t{}", c_name, r_name, d))?;
+    }
 
     Ok(())
 }

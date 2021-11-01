@@ -50,11 +50,12 @@ pub struct Transformer {
     /// Sort the alignment(s) by ID
     #[structopt(short, long)]
     sort: bool,
-    /// String of characters to ignore - e.g., `-e NX` -> dist(A, N) = 0 and dist(A, X) = 0
+    /// String of characters to ignore - e.g., `-e N-` -> dist(A, N) = 0 and dist(A, -) = 0
     ///
     /// Note, this option is applied *after* `--ignore-case` - i.e., if using `--ignore-case`, only
-    /// the uppercase form of a character is needed.
-    #[structopt(short = "e", long, default_value="N", parse(from_str=parse_ignored_chars))]
+    /// the uppercase form of a character is needed. To not ignore any characters, use `-e ''` or
+    /// `-e ""`
+    #[structopt(short = "e", long, default_value="N-", parse(from_str=parse_ignored_chars), allow_hyphen_values = true)]
     ignored_chars: HashSet<u8>,
 }
 
