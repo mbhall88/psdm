@@ -90,3 +90,138 @@ fn alignment_files_do_not_have_same_length() -> Result<(), Box<dyn std::error::E
 }
 
 // todo: add integration tests for distance matrices
+#[test]
+fn intra_alignment_with_defaults() -> Result<(), Box<dyn std::error::Error>> {
+    let aln = "tests/cases/aln1.fa";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&[aln]).unwrap().stdout;
+
+    let expected = b",s1,s2,s0\ns1,0,3,3\ns2,3,0,5\ns0,3,5,0\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}
+
+#[test]
+fn intra_alignment_with_ignore_case_ignore_no_characters() -> Result<(), Box<dyn std::error::Error>>
+{
+    let aln = "tests/cases/aln1.fa";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&["-i", "-e ''", aln]).unwrap().stdout;
+
+    let expected = b",s1,s2,s0\ns1,0,4,1\ns2,4,0,5\ns0,1,5,0\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}
+
+#[test]
+fn intra_alignment_with_use_case_ignore_characters() -> Result<(), Box<dyn std::error::Error>> {
+    let aln = "tests/cases/aln1.fa";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&["-e n-", aln]).unwrap().stdout;
+
+    let expected = b",s1,s2,s0\ns1,0,3,3\ns2,3,0,5\ns0,3,5,0\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}
+
+#[test]
+fn intra_alignment_with_ignore_case_ignore_characters() -> Result<(), Box<dyn std::error::Error>> {
+    let aln = "tests/cases/aln1.fa";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&["-i", "-e aN", aln]).unwrap().stdout;
+
+    let expected = b",s1,s2,s0\ns1,0,2,1\ns2,2,0,3\ns0,1,3,0\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}
+
+#[test]
+fn intra_alignment_with_ignore_case_ignore_characters_sorted(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let aln = "tests/cases/aln1.fa";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&["-s", "-i", "-e aN", aln]).unwrap().stdout;
+
+    let expected = b",s0,s1,s2\ns0,0,1,3\ns1,1,0,2\ns2,3,2,0\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}
+
+#[test]
+fn intra_alignment_with_defaults_long_form() -> Result<(), Box<dyn std::error::Error>> {
+    let aln = "tests/cases/aln1.fa";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&["-l", aln]).unwrap().stdout;
+
+    let expected = b"s1,s1,0
+s1,s2,3
+s1,s0,3
+s2,s1,3
+s2,s2,0
+s2,s0,5
+s0,s1,3
+s0,s2,5
+s0,s0,0\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}
+
+#[test]
+fn intra_alignment_with_defaults_long_form_sorted() -> Result<(), Box<dyn std::error::Error>> {
+    let aln = "tests/cases/aln1.fa";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&["-ls", aln]).unwrap().stdout;
+
+    let expected = b"s0,s0,0
+s0,s1,3
+s0,s2,5
+s1,s0,3
+s1,s1,0
+s1,s2,3
+s2,s0,5
+s2,s1,3
+s2,s2,0\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}
+
+#[test]
+fn inter_alignment_with_tab_delim() -> Result<(), Box<dyn std::error::Error>> {
+    let aln1 = "tests/cases/aln1.fa";
+    let aln2 = "tests/cases/aln2.fa.gz";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&["-d '\t'", aln1, aln2]).unwrap().stdout;
+
+    let expected = b"\ts1\ts2\ts0\ns2\t6\t6\t5\ns5\t1\t4\t3\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}
+#[test]
+fn inter_alignment_in_long_form_sorted() -> Result<(), Box<dyn std::error::Error>> {
+    let aln1 = "tests/cases/aln1.fa";
+    let aln2 = "tests/cases/aln2.fa.gz";
+
+    let mut cmd = Command::cargo_bin("psdm").unwrap();
+    let output = cmd.args(&["-ls", aln1, aln2]).unwrap().stdout;
+
+    let expected = b"s0,s2,5\ns0,s5,3\ns1,s2,6\ns1,s5,1\ns2,s2,6\ns2,s5,4\n";
+    assert_eq!(output, expected);
+
+    Ok(())
+}

@@ -1,7 +1,10 @@
 use anyhow::{anyhow, Context, Result};
+use itertools::iproduct;
+use ndarray::{ArrayBase, Ix2, OwnedRepr};
 use noodles_fasta as fasta;
 use std::collections::HashSet;
-use std::io::BufRead;
+use std::io;
+use std::io::{BufRead, Error, Write};
 use std::iter::FromIterator;
 use structopt::StructOpt;
 
@@ -117,6 +120,69 @@ fn dist(a: u8, b: u8) -> u64 {
 
 pub fn hamming_distance(a: &[u8], b: &[u8]) -> u64 {
     a.iter().zip(b).fold(0, |acc, (x, y)| acc + dist(*x, *y))
+}
+
+pub trait ToTable {
+    fn to_csv(
+        &self,
+        ostream: &mut Box<dyn Write>,
+        delimiter: char,
+        column_names: &[String],
+        row_names: &[String],
+    ) -> Result<(), io::Error>;
+    fn to_long(
+        &self,
+        ostream: &mut Box<dyn Write>,
+        delimiter: char,
+        column_names: &[String],
+        row_names: &[String],
+    ) -> Result<(), io::Error>;
+}
+
+impl ToTable for ArrayBase<OwnedRepr<u64>, Ix2> {
+    fn to_csv(
+        &self,
+        ostream: &mut Box<dyn Write>,
+        delimiter: char,
+        column_names: &[String],
+        row_names: &[String],
+    ) -> Result<(), Error> {
+        // write empty top-left corner cell
+        write!(ostream, "{}", delimiter)?;
+        let header: String = column_names.to_vec().join(&delimiter.to_string());
+        writeln!(ostream, "{}", header)?;
+
+        for (row_idx, row_name) in row_names.iter().enumerate() {
+            write!(ostream, "{}", row_name)?;
+            let row = self.row(row_idx);
+            let s = row
+                .iter()
+                .map(|x| format!("{}{}", delimiter, x.to_string()))
+                .collect::<String>();
+            writeln!(ostream, "{}", s)?;
+        }
+        Ok(())
+    }
+
+    fn to_long(
+        &self,
+        ostream: &mut Box<dyn Write>,
+        delimiter: char,
+        column_names: &[String],
+        row_names: &[String],
+    ) -> Result<(), Error> {
+        for (i, j) in iproduct!(0..column_names.len(), 0..row_names.len()) {
+            let dist = self[[j, i]];
+            let c_name = &column_names[i];
+            let r_name = &row_names[j];
+            writeln!(
+                ostream,
+                "{}",
+                format!("{}{d}{}{d}{}", c_name, r_name, dist, d = delimiter)
+            )?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

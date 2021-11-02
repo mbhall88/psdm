@@ -1,14 +1,14 @@
 use itertools::{iproduct, Itertools};
+use ndarray::Array;
 use rayon::prelude::*;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io::{stdout, BufReader, BufWriter, Write};
 use std::path::PathBuf;
-use ndarray::Array;
 
 use anyhow::{Context, Result};
 use noodles_fasta as fasta;
-use psdm::{hamming_distance, Transformer};
+use psdm::{hamming_distance, ToTable, Transformer};
 use structopt::StructOpt;
 
 /// A utility function that allows the CLI to error if a path doesn't exist
@@ -18,6 +18,21 @@ fn path_exists<S: AsRef<OsStr> + ?Sized>(s: &S) -> Result<PathBuf, OsString> {
         Ok(path)
     } else {
         Err(OsString::from(format!("{:?} does not exist", path)))
+    }
+}
+
+fn parse_delim(s: &str) -> Result<char, String> {
+    let strip = &['\'', '"', ' '][..];
+    let stripped = s.replace(strip, "").replace("\\\\", "\\");
+    let chars: Vec<char> = stripped.chars().collect();
+    if chars.len() > 1 {
+        if chars[0] == '\\' && chars[1] == 't' {
+            Ok('\t')
+        } else {
+            Err(format!("Too many delimiter characters given {:?}", chars))
+        }
+    } else {
+        Ok(chars[0])
     }
 }
 
@@ -47,6 +62,10 @@ struct Opt {
     /// first alignment and M is the number of sequences in the (optional) second alignment.
     #[structopt(short, long = "long")]
     long_form: bool,
+
+    /// Delimiting character for the output table
+    #[structopt(short, long = "delim", default_value = ",", parse(try_from_str=parse_delim))]
+    delimiter: char,
 
     #[structopt(flatten)]
     transformer: Transformer,
@@ -108,7 +127,9 @@ fn main() -> Result<()> {
             .collect(),
     };
 
-    let dists: Vec<u64> = pairwise_indices.as_slice()
+    // todo add progress bar
+    let dists: Vec<u64> = pairwise_indices
+        .as_slice()
         .into_par_iter()
         .map(|ix| {
             let i = ix[0];
@@ -121,32 +142,38 @@ fn main() -> Result<()> {
         })
         .collect();
 
-    let matrix = if n_seqs2 > 0 {
-        Array::from_shape_vec((n_seqs1, n_seqs2), dists).context("Failed to create matrix. This shouldn't happen, please raise an issue on GitHub")?
-    } else {
-        let mut mtx = Array::zeros((n_seqs1, n_seqs1));
-        for (ix, d) in pairwise_indices.iter().zip(dists) {
-            let i = ix[0];
-            let j = ix[1];
-            mtx[[i, j]] = d;
-            if i != j {
-                mtx[[j, i]] = d;
+    let matrix =
+        if n_seqs2 > 0 {
+            Array::from_shape_vec((n_seqs1, n_seqs2), dists).context(
+            "Failed to create matrix. This shouldn't happen, please raise an issue on GitHub",
+        )?.t().to_owned()
+        } else {
+            let mut mtx = Array::zeros((n_seqs1, n_seqs1));
+            for (ix, d) in pairwise_indices.iter().zip(dists) {
+                let i = ix[0];
+                let j = ix[1];
+                mtx[[i, j]] = d;
+                if i != j {
+                    mtx[[j, i]] = d;
+                }
             }
-        }
-        mtx
-    };
+            mtx
+        };
 
-    let row_names  = match &names2 {
+    let row_names: &Vec<String> = match &names2 {
         Some(n) => n,
-        None => &names1
+        None => &names1,
     };
-    let col_names = &names1;
-    // todo write col names
-    for ((i, j), d) in matrix.indexed_iter() {
-        let c_name = &col_names[j];
-        let r_name = &row_names[i];
-        // todo: write csv
-        writeln!(&mut ostream, "{}", format!("{}\t{}\t{}", c_name, r_name, d))?;
+    let col_names: &Vec<String> = &names1;
+
+    if opts.long_form {
+        matrix
+            .to_long(&mut ostream, opts.delimiter, col_names, row_names)
+            .context("Failed to write output table")?;
+    } else {
+        matrix
+            .to_csv(&mut ostream, opts.delimiter, col_names, row_names)
+            .context("Failed to write output table")?;
     }
 
     Ok(())
