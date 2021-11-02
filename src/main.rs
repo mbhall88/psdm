@@ -8,6 +8,8 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use log::info;
+use log::LevelFilter;
 use noodles_fasta as fasta;
 use psdm::{hamming_distance, ToTable, Transformer};
 use structopt::StructOpt;
@@ -72,17 +74,35 @@ struct Opt {
     #[structopt(short = "P", long = "progress")]
     show_progress: bool,
 
+    /// No logging (except progress info if `-P` is given)
+    #[structopt(short, long)]
+    quiet: bool,
+
     #[structopt(flatten)]
     transformer: Transformer,
 }
 
 fn main() -> Result<()> {
     let opts = Opt::from_args();
-    // todo: add logging
+    
+    // setup logging
+    let log_lvl = if opts.quiet {
+        LevelFilter::Error
+    } else {
+        LevelFilter::Info
+    };
+    let mut log_builder = env_logger::builder();
+    log_builder
+        .filter(None, log_lvl)
+        .format_module_path(false)
+        .init();
+
     // set the global default number of threads for rayon
     rayon::ThreadPoolBuilder::new()
         .num_threads(opts.threads)
         .build_global()?;
+
+    info!("Using {} thread(s)", rayon::current_num_threads());
 
     let mut ostream: Box<dyn Write> = match opts.output {
         None => Box::new(stdout()),
@@ -97,10 +117,16 @@ fn main() -> Result<()> {
         .map(fasta::Reader::new)
         .context("Could not open first alignment file")?;
 
+    info!("Loading first alignment file...");
     let (names1, seqs1) = opts
         .transformer
         .load_alignment(&mut reader1, 0)
         .context("Failed to load first alignment file")?;
+    info!(
+        "Loaded {} sequences with length {}bp",
+        seqs1.len(),
+        seqs1[0].len()
+    );
 
     let (names2, seqs2) = match opts.alignments.get(1) {
         Some(p) => {
@@ -108,10 +134,12 @@ fn main() -> Result<()> {
                 .map(|(r, _)| BufReader::new(r))
                 .map(fasta::Reader::new)
                 .context("Could not open second alignment file")?;
+            info!("Loading second alignment file...");
             let (n, s) = opts
                 .transformer
                 .load_alignment(&mut reader2, seqs1[0].len())
                 .context("Failed to load second alignment file")?;
+            info!("Loaded {} sequences with length {}bp", s.len(), s[0].len());
             (Some(n), Some(s))
         }
         None => (None, None),
@@ -139,6 +167,10 @@ fn main() -> Result<()> {
     } else {
         ProgressBar::hidden()
     };
+    info!(
+        "Calculating {} pairwise distances...",
+        pairwise_indices.len()
+    );
     let dists: Vec<u64> = pairwise_indices
         .as_slice()
         .into_par_iter()
@@ -171,6 +203,7 @@ fn main() -> Result<()> {
             }
             mtx
         };
+    info!("Finished computing distances");
 
     let row_names: &Vec<String> = match &names2 {
         Some(n) => n,
@@ -179,15 +212,17 @@ fn main() -> Result<()> {
     let col_names: &Vec<String> = &names1;
 
     if opts.long_form {
+        info!("Writing long-form table...");
         matrix
             .to_long(&mut ostream, opts.delimiter, col_names, row_names)
             .context("Failed to write output table")?;
     } else {
+        info!("Writing matrix...");
         matrix
             .to_csv(&mut ostream, opts.delimiter, col_names, row_names)
             .context("Failed to write output table")?;
     }
-
+    info!("Done!");
     Ok(())
 }
 

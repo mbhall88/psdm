@@ -14,6 +14,8 @@ itertools = "0.10"
 rayon = "1.5"
 indicatif = {version = "0.16", features = ["rayon"]}
 ndarray = "0.15"
+log = "0.4"
+env_logger = "0.9"
 
 [dev-dependencies]
 assert_cmd = "2"
