@@ -151,7 +151,7 @@ jobs:
         with:
           version: '0.18.0'
           timeout: '240'
-          args: '-- --test-threads 1 --bins --tests --follow-exec'
+          args: ' --bins --tests --follow-exec -- --test-threads 1'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1
