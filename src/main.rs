@@ -7,6 +7,7 @@ use std::io::{stdout, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use noodles_fasta as fasta;
 use psdm::{hamming_distance, ToTable, Transformer};
 use structopt::StructOpt;
@@ -66,6 +67,10 @@ struct Opt {
     /// Delimiting character for the output table
     #[structopt(short, long = "delim", default_value = ",", parse(try_from_str=parse_delim))]
     delimiter: char,
+
+    /// Show a progress bar
+    #[structopt(short = "P", long = "progress")]
+    show_progress: bool,
 
     #[structopt(flatten)]
     transformer: Transformer,
@@ -128,9 +133,17 @@ fn main() -> Result<()> {
     };
 
     // todo add progress bar
+    let pb = if opts.show_progress {
+        let style = ProgressStyle::default_bar()
+            .template("[{pos}/{len} ({percent}%) comparisons] {bar:40} [ETA {eta_precise}]");
+        ProgressBar::new(pairwise_indices.len() as u64).with_style(style)
+    } else {
+        ProgressBar::hidden()
+    };
     let dists: Vec<u64> = pairwise_indices
         .as_slice()
         .into_par_iter()
+        .progress_with(pb)
         .map(|ix| {
             let i = ix[0];
             let j = ix[1];

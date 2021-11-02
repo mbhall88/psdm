@@ -12,6 +12,7 @@ niffler = "2.3"
 noodles-fasta = "0.3"
 itertools = "0.10"
 rayon = "1.5"
+indicatif = {version = "0.16", features = ["rayon"]}
 ndarray = "0.15"
 
 [dev-dependencies]

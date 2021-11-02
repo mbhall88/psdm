@@ -89,7 +89,6 @@ fn alignment_files_do_not_have_same_length() -> Result<(), Box<dyn std::error::E
     Ok(())
 }
 
-// todo: add integration tests for distance matrices
 #[test]
 fn intra_alignment_with_defaults() -> Result<(), Box<dyn std::error::Error>> {
     let aln = "tests/cases/aln1.fa";
