@@ -132,7 +132,6 @@ fn main() -> Result<()> {
             .collect(),
     };
 
-    // todo add progress bar
     let pb = if opts.show_progress {
         let style = ProgressStyle::default_bar()
             .template("[{pos}/{len} ({percent}%) comparisons] {bar:40} [ETA {eta_precise}]");
