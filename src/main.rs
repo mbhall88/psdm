@@ -43,7 +43,7 @@ fn parse_delim(s: &str) -> Result<char, String> {
 #[derive(StructOpt, Debug)]
 #[structopt()]
 struct Opt {
-    /// Alignment file(s) to compute the pairwise distance for.
+    /// FASTA alignment file(s) to compute the pairwise distance for.
     ///
     /// Providing two files will compute the distances for all sequences in one file against all
     /// sequences from the other file - i.e., not between sequences in the same file.
@@ -84,7 +84,7 @@ struct Opt {
 
 fn main() -> Result<()> {
     let opts = Opt::from_args();
-    
+
     // setup logging
     let log_lvl = if opts.quiet {
         LevelFilter::Error
