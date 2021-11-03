@@ -6,6 +6,24 @@
 
 Compute a pairwise SNP distance matrix from one or two alignment(s)
 
+[TOC]: #
+
+## Table of Contents
+- [Motivation](#motivation)
+- [Install](#install)
+  - [`cargo`](#cargo)
+  - [`conda`](#conda)
+  - [Precompiled binaries](#precompiled-binaries)
+  - [`homebrew`](#homebrew)
+  - [Container](#container)
+  - [Local](#local)
+- [Usage](#usage)
+- [Benchmark](#benchmark)
+- [Contributing](#contributing)
+- [Citing](#citing)
+
+## Motivation
+
 A key point of difference for `psdm` is the pairwise SNP distance between **two**
 alignment files. This is particularly beneficial if you have computed a SNP distance
 matrix for many samples already and want to update the distances with some new samples -
@@ -17,15 +35,6 @@ sequences from SNP calls from Illumina and Nanopore and want to see how similar 
 Illumina-to-Nanopore (inter-technology) distances are - compared to the intra-technology
 distances.
 
-[TOC]: #
-
-## Table of Contents
-- [Install](#install)
-  - [`cargo`](#cargo)
-- [Usage](#usage)
-- [Benchmark](#benchmark)
-- [Contributing](#contributing)
-- [Citing](#citing)
 
 ## Install
 
@@ -36,8 +45,116 @@ distances.
 
 Prerequisite: [`rust` toolchain][rust] (min. v1.55.0)
 
-```sh
+```shell
 $ cargo install psdm
+```
+
+### `conda`
+
+[![Conda (channel only)](https://img.shields.io/conda/vn/bioconda/psdm)](https://anaconda.org/bioconda/psdm)
+[![bioconda version](https://anaconda.org/bioconda/psdm/badges/platforms.svg)](https://anaconda.org/bioconda/psdm)
+
+Prerequisite: [`conda`][conda] (and bioconda channel [correctly set up][channels])
+
+```shell
+$ conda install psdm
+```
+
+### Precompiled binaries
+
+**tl;dr**: Run the following snippet to download the latest binary for your system to
+the current directory and show the help menu.
+
+```shell
+version="0.1.0"
+OS=$(uname -s)                                                                                                       
+if [ "$OS" = "Linux" ]; then                                                                                         
+    triple="x86_64-unknown-linux-musl"                                                                              
+elif [ "$OS" = "Darwin" ]; then                                                                                        
+    triple="x86_64-apple-darwin"                                                         
+else                                                      
+    echo "ERROR: $OS not a recognised operating system"
+fi              
+if [ -n "$triple" ]; then   
+    URL="https://github.com/mbhall88/psdm/releases/download/${version}/psdm-${version}-${triple}.tar.gz"
+    wget "$URL" -O - | tar -xzf -
+    ./psdm --help             
+fi
+```
+
+These binaries _do not_ require that you have the `rust` toolchain installed.
+
+Currently, there are two pre-compiled binaries available:
+- Linux kernel `x86_64-unknown-linux-musl` (works on most Linux distributions I tested)
+- OSX kernel `x86_64-apple-darwin` (works for any post-2007 Mac)
+
+An example of downloading one of these binaries using `wget`
+
+```shell
+$ version="0.1.0"
+$ URL="https://github.com/mbhall88/psdm/releases/download/${version}/psdm-${version}-x86_64-unknown-linux-musl.tar.gz"
+$ wget "$URL" -O - | tar -xzf -
+$ ./psdm --help
+```
+
+If these binaries do not work on your system please raise an issue and I will
+potentially add some additional [target triples][triples].
+
+### `homebrew`
+
+Prerequisite: [`homebrew`][homebrew]
+
+The `homebrew` installation is done via the [homebrew-bio tap][brew-tap].
+
+```shell
+$ brew install brewsci/bio/psdm
+```
+
+### Container
+
+Docker images are hosted at [quay.io].
+
+#### `singularity`
+
+Prerequisite: [`singularity`][singularity]
+
+```shell
+$ URI="docker://quay.io/mbhall88/psdm"
+$ singularity exec "$URI" psdm --help
+```
+
+The above will use the latest version. If you want to specify a version then use a
+[tag][quay.io] (or commit) like so.
+
+```shell
+$ VERSION="0.1.0"
+$ URI="docker://quay.io/mbhall88/psdm:${VERSION}"
+```
+
+#### `docker`
+
+[![Docker Repository on Quay](https://quay.io/repository/mbhall88/psdm/status "Docker Repository on Quay")](https://quay.io/repository/mbhall88/psdm)
+
+Prerequisite: [`docker`][docker]
+
+```shhell
+$ docker pull quay.io/mbhall88/psdm
+$ docker run quay.io/mbhall88/psdm psdm --help
+```
+
+You can find all the available tags on the [quay.io repository][quay.io].
+
+### Local
+
+Prerequisite: [`rust` toolchain][rust]
+
+```sh
+git clone https://github.com/mbhall88/psdm.git
+cd psdm
+cargo build --release
+target/release/psdm --help
+# if you want to check everything is working ok
+cargo test
 ```
 
 ## Usage
@@ -53,3 +170,11 @@ Benefits:
 
 
 [rust]: https://www.rust-lang.org/tools/install
+[channels]: https://bioconda.github.io/user/install.html#set-up-channels
+[conda]: https://docs.conda.io/projects/conda/en/latest/user-guide/install/
+[quay.io]: https://quay.io/repository/mbhall88/psdm
+[singularity]: https://sylabs.io/guides/3.4/user-guide/quick_start.html#quick-installation-steps
+[docker]: https://docs.docker.com/v17.12/install/
+[homebrew]: https://docs.brew.sh/Installation
+[brew-tap]: https://github.com/brewsci/homebrew-bio
+[triples]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
