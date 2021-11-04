@@ -155,7 +155,7 @@ Prerequisite: [`rust` toolchain][rust]
 $ git clone https://github.com/mbhall88/psdm.git
 $ cd psdm
 $ cargo build --release
-$target/release/psdm --help
+$ target/release/psdm --help
 # if you want to check everything is working ok
 $ cargo test
 ```
@@ -197,7 +197,7 @@ AB-DEFGG
 ```
 
 ```shell
-$ psdm aln1.fa
+$ psdm aln1.fa aln2.fa.gz
 ,s1,s2,s0
 s2,6,6,5
 s5,1,4,3
@@ -210,7 +210,7 @@ The column names represent the **first** alignment file provided.
 I'd like the sequences to be sorted by identifier in the output
 
 ```shell
-$ psdm -s aln1.fa aln2.fa.gz
+$ psdm -s aln1.fa
 ,s0,s1,s2
 s0,0,3,5
 s1,3,0,3
