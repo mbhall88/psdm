@@ -42,7 +42,8 @@ def main():
     ax.legend(handles, labels, title="tool")
 
     tbl = df.groupby(["tool", "threads"])["time"].describe()
-    tbl.drop(columns="count", inplace=True)
+    tbl.drop(columns=["count", "25%", "75%"], inplace=True)
+    tbl.rename(columns={"50%": "median", "std": "SD"}, inplace=True)
     tbl.reset_index(inplace=True)
     tbl.sort_values(by="threads", inplace=True)
     print(tbl.to_markdown(index=False, floatfmt=".1f"))
