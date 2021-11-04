@@ -2,8 +2,17 @@
 name = "psdm"
 version = "0.1.0"
 edition = "2018"
+authors = ["Michael Hall <michael@mbh.sh>"]
+repository = "https://github.com/mbhall88/psdm"
+homepage = "https://github.com/mbhall88/psdm"
+readme = "README.md"
+keywords = ["bioinformatics", "SNP", "matrix", "fasta", "pairwise"]
+categories = ["science", "command-line-utilities"]
+license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[badges]
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 structopt = "0.3"
