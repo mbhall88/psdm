@@ -46,7 +46,8 @@ struct Opt {
     /// FASTA alignment file(s) to compute the pairwise distance for.
     ///
     /// Providing two files will compute the distances for all sequences in one file against all
-    /// sequences from the other file - i.e., not between sequences in the same file.
+    /// sequences from the other file - i.e., not between sequences in the same file. The first
+    /// file will be the column names, while the second is the row names.
     /// The alignment file(s) can be compressed.
     #[structopt(required = true, min_values = 1, max_values = 2, parse(try_from_os_str = path_exists))]
     alignments: Vec<PathBuf>,

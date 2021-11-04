@@ -35,6 +35,8 @@ sequences from SNP calls from Illumina and Nanopore and want to see how similar 
 Illumina-to-Nanopore (inter-technology) distances are - compared to the intra-technology
 distances.
 
+Despite these motivations, `psdm` can still be used to compute a "traditional" pairwise
+SNP distance matrix for a single FASTA alignment file.
 
 ## Install
 
@@ -149,15 +151,203 @@ You can find all the available tags on the [quay.io repository][quay.io].
 Prerequisite: [`rust` toolchain][rust]
 
 ```sh
-git clone https://github.com/mbhall88/psdm.git
-cd psdm
-cargo build --release
-target/release/psdm --help
+$ git clone https://github.com/mbhall88/psdm.git
+$ cd psdm
+$ cargo build --release
+$target/release/psdm --help
 # if you want to check everything is working ok
-cargo test
+$ cargo test
 ```
 
 ## Usage
+
+### Quick
+
+#### Single alignment file
+
+**`aln1.fa`**
+
+```
+>s1
+ABCDEFGH
+>s2
+aBN-XFnH
+>s0
+AbCdEfG-
+```
+
+```shell
+$ psdm aln1.fa
+,s1,s2,s0
+s1,0,3,3
+s2,3,0,5
+s0,3,5,0
+```
+
+#### Two alignment files
+
+**`aln2.fa.gz`**
+
+```
+>s2
+xXNNfoo=
+>s5 description
+AB-DEFGG
+```
+
+```shell
+$ psdm aln1.fa aln2.fa.gz
+,s1,s2,s0
+s2,6,6,5
+s5,1,4,3
+```
+
+The column names represent the **first** alignment file provided.
+
+### Full
+
+I'd like the sequences to be sorted by identifier in the output
+
+```shell
+$ psdm -s aln1.fa aln2.fa.gz
+,s0,s1,s2
+s0,0,3,5
+s1,3,0,3
+s2,5,3,0
+```
+
+I want a tab-delimited (TSV) matrix instead of a comma-delimited (CSV) one
+
+```shell
+$ psdm -d "\t" aln1.fa
+        s1      s2      s0
+s1      0       3       3
+s2      3       0       5
+s0      3       5       0
+```
+
+Ignore the case of nucleotides - i.e., `acgt` is the same as `ACGT`
+
+```shell
+$ psdm -i aln1.fa
+,s1,s2,s0
+s1,0,1,0
+s2,1,0,1
+s0,0,1,0
+```
+
+By default, `psdm` ignores `N`'s and gaps (`-`). However, maybe you also want to ignore
+`X`'s
+
+```shell
+$ psdm -e NX- aln1.fa
+,s1,s2,s0
+s1,0,2,3
+s2,2,0,4
+s0,3,4,0
+```
+
+Or maybe you don't want to ignore anything
+
+```shell
+$ psdm -e "" aln1.fa
+,s1,s2,s0
+s1,0,5,4
+s2,5,0,8
+s0,4,8,0
+```
+
+I'm impatient, use all the threads I have!
+
+```shell
+$ psdm -t 0 aln1.fa
+```
+
+Give me long-form output instead of a matrix
+
+```shell
+$ psdm -l aln1.fa
+s1,s1,0
+s1,s2,3
+s1,s0,3
+s2,s1,3
+s2,s2,0
+s2,s0,5
+s0,s1,3
+s0,s2,5
+s0,s0,0
+```
+
+I'd like to know the progress of the pairwise comparisons
+
+```shell
+$ psdm -P big.aln.fa
+[2599/11476 (23%) comparisons] █████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ [ETA 00:00:28]
+```
+
+Write the matrix to a file please
+
+```shell
+$ psdm -o dists.csv aln1.fa
+```
+
+```
+$ psdm --help
+psdm 0.1.0
+Compute a pairwise SNP distance matrix from one or two alignment(s)
+
+USAGE:
+    psdm [FLAGS] [OPTIONS] <alignments>...
+
+FLAGS:
+    -h, --help
+            Prints help information
+
+    -i, --ignore-case
+            Ignore case - i.e., dist(a, A) = 0
+
+    -l, --long
+            Output as long-form ("melted") table
+
+            By default the output is a N x N or N x M table where N is the number of sequences in the first alignment
+            and M is the number of sequences in the (optional) second alignment.
+    -q, --quiet
+            No logging (except progress info if `-P` is given)
+
+    -P, --progress
+            Show a progress bar
+
+    -s, --sort
+            Sort the alignment(s) by ID
+
+    -V, --version
+            Prints version information
+
+
+OPTIONS:
+    -d, --delim <delimiter>
+            Delimiting character for the output table [default: ,]
+
+    -e, --ignored-chars <ignored-chars>
+            String of characters to ignore - e.g., `-e N-` -> dist(A, N) = 0 and dist(A, -) = 0
+
+            Note, this option is applied *after* `--ignore-case` - i.e., if using `--ignore-case`, only the uppercase
+            form of a character is needed. To not ignore any characters, use `-e ''` or `-e ""` [default: N-]
+    -o, --output <output>
+            Output file name [default: stdout]
+
+    -t, --threads <threads>
+            Number of threads to use. Setting to 0 will use all available [default: 1]
+
+
+ARGS:
+    <alignments>...
+            FASTA alignment file(s) to compute the pairwise distance for.
+
+            Providing two files will compute the distances for all sequences in one file against all sequences from the
+            other file - i.e., not between sequences in the same file. The first file will be the column names, while
+            the second is the row names. The alignment file(s) can be compressed.
+```
 
 ## Benchmark
 
