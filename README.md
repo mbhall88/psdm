@@ -22,7 +22,6 @@ Compute a pairwise SNP distance matrix from one or two alignment(s)
   - [Full](#full)
 - [Benchmark](#benchmark)
 - [Contributing](#contributing)
-- [Citing](#citing)
 
 ## Motivation
 
@@ -198,7 +197,7 @@ AB-DEFGG
 ```
 
 ```shell
-$ psdm aln1.fa aln2.fa.gz
+$ psdm aln1.fa
 ,s1,s2,s0
 s2,6,6,5
 s5,1,4,3
@@ -353,12 +352,30 @@ ARGS:
 
 ## Benchmark
 
+We benchmark against [`snp-dists`][snp-dists] (v0.8.2). `snp-dists` is a brilliant tool
+for computing SNP distance matrices and is the inspiration for `psdm`.
+
+As `snp-dists` doesn't allow inter-alignment comparisons, we will benchmark the
+intra-alignment mode. We use an alignment file of 151 sequences with a length of
+4411532bp.
+
+The benchmark times were recorded with [`hyperfine`][hyperfine].
+
+![Benchmark plot](benchmark/benchmark.png)
+
 ## Contributing
 
-## Citing
+Contributions are always welcome. For changes to be accepted, they must pass the CI and
+coverage checks. These include:
 
-Benefits:
-  - update existing matrices without need to rerun all comparisons
+- Code is formatted (`cargo fmt`).
+- There are no compiler errors/warnings. `cargo clippy --all-features --all-targets --
+  -D warnings`
+- Test code coverage has not reduced.
+
+Please also add a succinct description of the contribution in the
+[CHANGELOG](CHANGELOG.md).
+
 
 
 [rust]: https://www.rust-lang.org/tools/install
@@ -370,3 +387,5 @@ Benefits:
 [homebrew]: https://docs.brew.sh/Installation
 [brew-tap]: https://github.com/brewsci/homebrew-bio
 [triples]: https://clang.llvm.org/docs/CrossCompilation.html#target-triple
+[snp-dists]: https://github.com/tseemann/snp-dists
+[hyperfine]: https://github.com/sharkdp/hyperfine
