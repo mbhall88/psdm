@@ -3,6 +3,7 @@
 [![Rust CI](https://github.com/mbhall88/psdm/actions/workflows/rust-ci.yaml/badge.svg)](https://github.com/mbhall88/psdm/actions/workflows/rust-ci.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![github release version](https://img.shields.io/github/v/release/mbhall88/psdm)](https://github.com/mbhall88/psdm/releases)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5706785.svg)](https://doi.org/10.5281/zenodo.5706785)
 
 Compute a pairwise SNP distance matrix from one or two alignment(s)
 
@@ -22,6 +23,7 @@ Compute a pairwise SNP distance matrix from one or two alignment(s)
   - [Full](#full)
 - [Benchmark](#benchmark)
 - [Contributing](#contributing)
+- [Cite](#cite)
 
 ## Motivation
 
@@ -390,7 +392,23 @@ coverage checks. These include:
 Please also add a succinct description of the contribution in the
 [CHANGELOG](CHANGELOG.md).
 
+# Cite
 
+`psdm` is archived [at Zenodo](https://zenodo.org/record/5706785).
+
+```bibtex
+@software{Hall2021psdm,
+  author       = {Hall, Michael B.},
+  title        = {{psdm: Compute a pairwise SNP distance matrix from 
+                   one or two alignment(s)}},
+  month        = nov,
+  year         = 2021,
+  publisher    = {Zenodo},
+  version      = {0.1.0},
+  doi          = {10.5281/zenodo.5706785},
+  url          = {https://doi.org/10.5281/zenodo.5706785}
+}
+```
 
 [rust]: https://www.rust-lang.org/tools/install
 [channels]: https://bioconda.github.io/user/install.html#set-up-channels
