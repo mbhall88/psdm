@@ -58,6 +58,7 @@ $ cargo install psdm
 
 [![Conda (channel only)](https://img.shields.io/conda/vn/bioconda/psdm)](https://anaconda.org/bioconda/psdm)
 [![bioconda version](https://anaconda.org/bioconda/psdm/badges/platforms.svg)](https://anaconda.org/bioconda/psdm)
+![Conda](https://img.shields.io/conda/dn/bioconda/psdm)
 
 Prerequisite: [`conda`][conda] (and bioconda channel [correctly set up][channels])
 
