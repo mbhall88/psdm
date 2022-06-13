@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**BREAKING CHANGES**
+
+### Added
+- `-c/--case-sensitive` flag. To emulate previous default behaviour, use `-c`.
+
+### Removed
+- `-i/--ignore-case` - i.e., default is now to ignore case
+
 ## [0.1.0] - 2021-11-04
 
 ### Added

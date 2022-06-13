@@ -183,9 +183,9 @@ AbCdEfG-
 ```shell
 $ psdm aln1.fa
 ,s1,s2,s0
-s1,0,3,3
-s2,3,0,5
-s0,3,5,0
+s1,0,1,0
+s2,1,0,1
+s0,0,1,0
 ```
 
 #### Two alignment files
@@ -202,8 +202,8 @@ AB-DEFGG
 ```shell
 $ psdm aln1.fa aln2.fa.gz
 ,s1,s2,s0
-s2,6,6,5
-s5,1,4,3
+s2,6,5,5
+s5,1,2,0
 ```
 
 The column names represent the **first** alignment file provided.
@@ -215,9 +215,9 @@ I'd like the sequences to be sorted by identifier in the output
 ```shell
 $ psdm -s aln1.fa
 ,s0,s1,s2
-s0,0,3,5
-s1,3,0,3
-s2,5,3,0
+s0,0,0,1
+s1,0,0,1
+s2,1,1,0
 ```
 
 I want a tab-delimited (TSV) matrix instead of a comma-delimited (CSV) one
@@ -225,19 +225,19 @@ I want a tab-delimited (TSV) matrix instead of a comma-delimited (CSV) one
 ```shell
 $ psdm -d "\t" aln1.fa
         s1      s2      s0
-s1      0       3       3
-s2      3       0       5
-s0      3       5       0
+s1      0       1       0
+s2      1       0       1
+s0      0       1       0
 ```
 
-Ignore the case of nucleotides - i.e., `acgt` is the same as `ACGT`
+The case of nucleotides matters to me - i.e., `acgt` is *not* the same as `ACGT`
 
 ```shell
-$ psdm -i aln1.fa
+$ psdm -c aln1.fa
 ,s1,s2,s0
-s1,0,1,0
-s2,1,0,1
-s0,0,1,0
+s1,0,3,3
+s2,3,0,5
+s0,3,5,0
 ```
 
 By default, `psdm` ignores `N`'s and gaps (`-`). However, maybe you also want to ignore
@@ -246,9 +246,9 @@ By default, `psdm` ignores `N`'s and gaps (`-`). However, maybe you also want to
 ```shell
 $ psdm -e NX- aln1.fa
 ,s1,s2,s0
-s1,0,2,3
-s2,2,0,4
-s0,3,4,0
+s1,0,0,0
+s2,0,0,0
+s0,0,0,0
 ```
 
 Or maybe you don't want to ignore anything
@@ -272,13 +272,13 @@ Give me long-form output instead of a matrix
 ```shell
 $ psdm -l aln1.fa
 s1,s1,0
-s1,s2,3
-s1,s0,3
-s2,s1,3
+s1,s2,1
+s1,s0,0
+s2,s1,1
 s2,s2,0
-s2,s0,5
-s0,s1,3
-s0,s2,5
+s2,s0,1
+s0,s1,0
+s0,s2,1
 s0,s0,0
 ```
 
@@ -298,59 +298,66 @@ $ psdm -o dists.csv aln1.fa
 ```
 $ psdm --help
 psdm 0.1.0
+Michael Hall <michael@mbh.sh>
 Compute a pairwise SNP distance matrix from one or two alignment(s)
 
 USAGE:
-    psdm [FLAGS] [OPTIONS] <alignments>...
+    psdm [OPTIONS] [ALIGNMENTS]...
 
-FLAGS:
+ARGS:
+    <ALIGNMENTS>...
+            FASTA alignment file(s) to compute the pairwise distance for.
+
+            Providing two files will compute the distances for all sequences in one file against all
+            sequences from the other file - i.e., not between sequences in the same file. The first
+            file will be the column names, while the second is the row names. The alignment file(s)
+            can be compressed.
+
+OPTIONS:
+    -c, --case-sensitive
+            Case matters - i.e., dist(a, A) = 1
+
+    -d, --delim <DELIMITER>
+            Delimiting character for the output table
+
+            [default: ,]
+
+    -e, --ignored-chars <IGNORED_CHARS>
+            String of characters to ignore - e.g., `-e N-` -> dist(A, N) = 0 and dist(A, -) = 0
+
+            Note, if using `--case-sensitive` the upper- and lower-case form of a character is
+            needed. To not ignore any characters, use `-e ''` or `-e ""`
+
+            [default: N-]
+
     -h, --help
-            Prints help information
-
-    -i, --ignore-case
-            Ignore case - i.e., dist(a, A) = 0
+            Print help information
 
     -l, --long
             Output as long-form ("melted") table
 
-            By default the output is a N x N or N x M table where N is the number of sequences in the first alignment
-            and M is the number of sequences in the (optional) second alignment.
-    -q, --quiet
-            No logging (except progress info if `-P` is given)
+            By default the output is a N x N or N x M table where N is the number of sequences in
+            the first alignment and M is the number of sequences in the (optional) second alignment.
+
+    -o, --output <OUTPUT>
+            Output file name [default: stdout]
 
     -P, --progress
             Show a progress bar
 
+    -q, --quiet
+            No logging (except progress info if `-P` is given)
+
     -s, --sort
             Sort the alignment(s) by ID
 
+    -t, --threads <THREADS>
+            Number of threads to use. Setting to 0 will use all available
+
+            [default: 1]
+
     -V, --version
-            Prints version information
-
-
-OPTIONS:
-    -d, --delim <delimiter>
-            Delimiting character for the output table [default: ,]
-
-    -e, --ignored-chars <ignored-chars>
-            String of characters to ignore - e.g., `-e N-` -> dist(A, N) = 0 and dist(A, -) = 0
-
-            Note, this option is applied *after* `--ignore-case` - i.e., if using `--ignore-case`, only the uppercase
-            form of a character is needed. To not ignore any characters, use `-e ''` or `-e ""` [default: N-]
-    -o, --output <output>
-            Output file name [default: stdout]
-
-    -t, --threads <threads>
-            Number of threads to use. Setting to 0 will use all available [default: 1]
-
-
-ARGS:
-    <alignments>...
-            FASTA alignment file(s) to compute the pairwise distance for.
-
-            Providing two files will compute the distances for all sequences in one file against all sequences from the
-            other file - i.e., not between sequences in the same file. The first file will be the column names, while
-            the second is the row names. The alignment file(s) can be compressed.
+            Print version information
 ```
 
 ## Benchmark

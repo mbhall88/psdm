@@ -4,7 +4,6 @@ use itertools::iproduct;
 use ndarray::{ArrayBase, Ix2, OwnedRepr};
 use noodles_fasta as fasta;
 use std::collections::HashSet;
-use std::io;
 use std::io::{BufRead, Error, Write};
 use std::iter::FromIterator;
 
@@ -47,17 +46,16 @@ fn parse_ignored_chars(s: &str) -> HashSet<u8> {
 // A struct to hold all of the options for the transforming sequences
 #[derive(Parser, Debug, Default)]
 pub struct Transformer {
-    /// Ignore case - i.e., dist(a, A) = 0
+    /// Case matters - i.e., dist(a, A) = 1
     #[clap(short, long)]
-    ignore_case: bool,
+    case_sensitive: bool,
     /// Sort the alignment(s) by ID
     #[clap(short, long)]
     sort: bool,
     /// String of characters to ignore - e.g., `-e N-` -> dist(A, N) = 0 and dist(A, -) = 0
     ///
-    /// Note, this option is applied *after* `--ignore-case` - i.e., if using `--ignore-case`, only
-    /// the uppercase form of a character is needed. To not ignore any characters, use `-e ''` or
-    /// `-e ""`
+    /// Note, if using `--case-sensitive` the upper- and lower-case form of a character is needed.
+    /// To not ignore any characters, use `-e ''` or `-e ""`
     #[clap(short = 'e', long, default_value="N-", parse(from_str=parse_ignored_chars), allow_hyphen_values = true)]
     ignored_chars: HashSet<u8>,
 }
@@ -92,7 +90,7 @@ impl Transformer {
             seqs.sort_by_indices(&mut indices);
         }
 
-        let skip_transform = self.ignored_chars.is_empty() && !self.ignore_case;
+        let skip_transform = self.ignored_chars.is_empty() && !self.case_sensitive;
         if !skip_transform {
             for seq in seqs.iter_mut() {
                 self.transform(seq);
@@ -104,7 +102,7 @@ impl Transformer {
 
     fn transform(&self, seq: &mut Vec<u8>) {
         for b in seq {
-            if self.ignore_case {
+            if !self.case_sensitive {
                 b.make_ascii_uppercase();
             }
             if self.ignored_chars.contains(b) {
@@ -129,14 +127,14 @@ pub trait ToTable {
         delimiter: char,
         column_names: &[String],
         row_names: &[String],
-    ) -> Result<(), io::Error>;
+    ) -> Result<(), Error>;
     fn to_long(
         &self,
         ostream: &mut Box<dyn Write>,
         delimiter: char,
         column_names: &[String],
         row_names: &[String],
-    ) -> Result<(), io::Error>;
+    ) -> Result<(), Error>;
 }
 
 impl ToTable for ArrayBase<OwnedRepr<u64>, Ix2> {
@@ -282,7 +280,10 @@ mod tests {
     fn transform_preserve_case() {
         let mut s = b"aC-t".to_vec();
         let expected = s.clone();
-        let t = Transformer::default();
+        let t: Transformer = Transformer {
+            case_sensitive: true,
+            ..Default::default()
+        };
 
         t.transform(&mut s);
 
@@ -293,7 +294,7 @@ mod tests {
     fn transform_ignore_case() {
         let mut s = b"aC-t".to_vec();
         let t = Transformer {
-            ignore_case: true,
+            case_sensitive: false,
             ..Default::default()
         };
 
@@ -308,6 +309,7 @@ mod tests {
         let ignore = HashSet::from_iter(b"N-x".to_vec());
         let t = Transformer {
             ignored_chars: ignore,
+            case_sensitive: true,
             ..Default::default()
         };
         let mut s = b"AxC-GNt".to_vec();
@@ -323,6 +325,7 @@ mod tests {
         let ignore = HashSet::from_iter(b"N".to_vec());
         let t = Transformer {
             ignored_chars: ignore,
+            case_sensitive: true,
             ..Default::default()
         };
         let mut s = b"ACGnt".to_vec();
@@ -338,7 +341,7 @@ mod tests {
         let ignore = HashSet::from_iter(b"N".to_vec());
         let t = Transformer {
             ignored_chars: ignore,
-            ignore_case: true,
+            case_sensitive: false,
             ..Default::default()
         };
         let mut s = b"ACGnt".to_vec();
