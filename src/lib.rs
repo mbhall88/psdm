@@ -157,7 +157,7 @@ impl ToTable for ArrayBase<OwnedRepr<u64>, Ix2> {
             let row = self.row(row_idx);
             let s = row
                 .iter()
-                .map(|x| format!("{}{}", delimiter, x.to_string()))
+                .map(|x| format!("{}{}", delimiter, x))
                 .collect::<String>();
             writeln!(ostream, "{}", s)?;
         }
@@ -175,11 +175,7 @@ impl ToTable for ArrayBase<OwnedRepr<u64>, Ix2> {
             let dist = self[[j, i]];
             let c_name = &column_names[i];
             let r_name = &row_names[j];
-            writeln!(
-                ostream,
-                "{}",
-                format!("{}{d}{}{d}{}", c_name, r_name, dist, d = delimiter)
-            )?;
+            writeln!(ostream, "{}{d}{}{d}{}", c_name, r_name, dist, d = delimiter)?;
         }
         Ok(())
     }

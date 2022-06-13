@@ -20,7 +20,7 @@ fn path_exists<S: AsRef<OsStr> + ?Sized>(s: &S) -> Result<PathBuf, String> {
     if path.exists() {
         Ok(path)
     } else {
-        Err(String::from(format!("{:?} does not exist", path)))
+        Err(format!("{:?} does not exist", path))
     }
 }
 
