@@ -1,26 +1,26 @@
 use itertools::{iproduct, Itertools};
 use ndarray::Array;
 use rayon::prelude::*;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{stdout, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use clap::Parser;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use log::info;
 use log::LevelFilter;
 use noodles_fasta as fasta;
 use psdm::{hamming_distance, ToTable, Transformer};
-use structopt::StructOpt;
 
 /// A utility function that allows the CLI to error if a path doesn't exist
-fn path_exists<S: AsRef<OsStr> + ?Sized>(s: &S) -> Result<PathBuf, OsString> {
+fn path_exists<S: AsRef<OsStr> + ?Sized>(s: &S) -> Result<PathBuf, String> {
     let path = PathBuf::from(s);
     if path.exists() {
         Ok(path)
     } else {
-        Err(OsString::from(format!("{:?} does not exist", path)))
+        Err(String::from(format!("{:?} does not exist", path)))
     }
 }
 
@@ -40,8 +40,8 @@ fn parse_delim(s: &str) -> Result<char, String> {
 }
 
 /// Compute a pairwise SNP distance matrix from one or two alignment(s)
-#[derive(StructOpt, Debug)]
-#[structopt()]
+#[derive(Parser, Debug)]
+#[clap(author, version, about, verbatim_doc_comment)]
 struct Opt {
     /// FASTA alignment file(s) to compute the pairwise distance for.
     ///
@@ -49,42 +49,42 @@ struct Opt {
     /// sequences from the other file - i.e., not between sequences in the same file. The first
     /// file will be the column names, while the second is the row names.
     /// The alignment file(s) can be compressed.
-    #[structopt(required = true, min_values = 1, max_values = 2, parse(try_from_os_str = path_exists))]
+    #[clap(min_values = 1, max_values = 2, parse(try_from_os_str = path_exists))]
     alignments: Vec<PathBuf>,
 
     /// Output file name [default: stdout]
-    #[structopt(short, long, parse(from_os_str))]
+    #[clap(short, long, parse(from_os_str))]
     output: Option<PathBuf>,
 
     /// Number of threads to use. Setting to 0 will use all available
-    #[structopt(short, long, default_value = "1")]
+    #[clap(short, long, default_value = "1")]
     threads: usize,
 
     /// Output as long-form ("melted") table
     ///
     /// By default the output is a N x N or N x M table where N is the number of sequences in the
     /// first alignment and M is the number of sequences in the (optional) second alignment.
-    #[structopt(short, long = "long")]
+    #[clap(short, long = "long")]
     long_form: bool,
 
     /// Delimiting character for the output table
-    #[structopt(short, long = "delim", default_value = ",", parse(try_from_str=parse_delim))]
+    #[clap(short, long = "delim", default_value = ",", parse(try_from_str=parse_delim))]
     delimiter: char,
 
     /// Show a progress bar
-    #[structopt(short = "P", long = "progress")]
+    #[clap(short = 'P', long = "progress")]
     show_progress: bool,
 
     /// No logging (except progress info if `-P` is given)
-    #[structopt(short, long)]
+    #[clap(short, long)]
     quiet: bool,
 
-    #[structopt(flatten)]
+    #[clap(flatten)]
     transformer: Transformer,
 }
 
 fn main() -> Result<()> {
-    let opts = Opt::from_args();
+    let opts = Opt::parse();
 
     // setup logging
     let log_lvl = if opts.quiet {

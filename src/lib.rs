@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Context, Result};
+use clap::Parser;
 use itertools::iproduct;
 use ndarray::{ArrayBase, Ix2, OwnedRepr};
 use noodles_fasta as fasta;
@@ -6,7 +7,6 @@ use std::collections::HashSet;
 use std::io;
 use std::io::{BufRead, Error, Write};
 use std::iter::FromIterator;
-use structopt::StructOpt;
 
 const IGNORE: u8 = b'.';
 
@@ -45,20 +45,20 @@ fn parse_ignored_chars(s: &str) -> HashSet<u8> {
 }
 
 // A struct to hold all of the options for the transforming sequences
-#[derive(StructOpt, Debug, Default)]
+#[derive(Parser, Debug, Default)]
 pub struct Transformer {
     /// Ignore case - i.e., dist(a, A) = 0
-    #[structopt(short, long)]
+    #[clap(short, long)]
     ignore_case: bool,
     /// Sort the alignment(s) by ID
-    #[structopt(short, long)]
+    #[clap(short, long)]
     sort: bool,
     /// String of characters to ignore - e.g., `-e N-` -> dist(A, N) = 0 and dist(A, -) = 0
     ///
     /// Note, this option is applied *after* `--ignore-case` - i.e., if using `--ignore-case`, only
     /// the uppercase form of a character is needed. To not ignore any characters, use `-e ''` or
     /// `-e ""`
-    #[structopt(short = "e", long, default_value="N-", parse(from_str=parse_ignored_chars), allow_hyphen_values = true)]
+    #[clap(short = 'e', long, default_value="N-", parse(from_str=parse_ignored_chars), allow_hyphen_values = true)]
     ignored_chars: HashSet<u8>,
 }
 
