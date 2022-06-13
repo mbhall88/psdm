@@ -3,7 +3,7 @@
 [![Rust CI](https://github.com/mbhall88/psdm/actions/workflows/rust-ci.yaml/badge.svg)](https://github.com/mbhall88/psdm/actions/workflows/rust-ci.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![github release version](https://img.shields.io/github/v/release/mbhall88/psdm)](https://github.com/mbhall88/psdm/releases)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5706785.svg)](https://doi.org/10.5281/zenodo.5706785)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5706784.svg)](https://doi.org/10.5281/zenodo.5706784)
 
 Compute a pairwise SNP distance matrix from one or two alignment(s)
 
@@ -413,7 +413,7 @@ Please also add a succinct description of the contribution in the
   year         = 2021,
   publisher    = {Zenodo},
   version      = {0.2.0},
-  doi          = {10.5281/zenodo.5706785},
+  doi          = {10.5281/zenodo.5706784},
   url          = {https://doi.org/10.5281/zenodo.5706785}
 }
 ```
