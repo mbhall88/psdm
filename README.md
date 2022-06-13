@@ -72,7 +72,7 @@ $ conda install psdm
 the current directory and show the help menu.
 
 ```shell
-version="0.1.0"
+version="0.2.0"
 OS=$(uname -s)                                                                                                       
 if [ "$OS" = "Linux" ]; then                                                                                         
     triple="x86_64-unknown-linux-musl"                                                                              
@@ -97,7 +97,7 @@ Currently, there are two pre-compiled binaries available:
 An example of downloading one of these binaries using `wget`
 
 ```shell
-$ version="0.1.0"
+$ version="0.2.0"
 $ URL="https://github.com/mbhall88/psdm/releases/download/${version}/psdm-${version}-x86_64-unknown-linux-musl.tar.gz"
 $ wget "$URL" -O - | tar -xzf -
 $ ./psdm --help
@@ -133,7 +133,7 @@ The above will use the latest version. If you want to specify a version then use
 [tag][quay.io] (or commit) like so.
 
 ```shell
-$ VERSION="0.1.0"
+$ VERSION="0.2.0"
 $ URI="docker://quay.io/mbhall88/psdm:${VERSION}"
 ```
 
@@ -297,7 +297,7 @@ $ psdm -o dists.csv aln1.fa
 
 ```
 $ psdm --help
-psdm 0.1.0
+psdm 0.2.0
 Michael Hall <michael@mbh.sh>
 Compute a pairwise SNP distance matrix from one or two alignment(s)
 
@@ -412,7 +412,7 @@ Please also add a succinct description of the contribution in the
   month        = nov,
   year         = 2021,
   publisher    = {Zenodo},
-  version      = {0.1.0},
+  version      = {0.2.0},
   doi          = {10.5281/zenodo.5706785},
   url          = {https://doi.org/10.5281/zenodo.5706785}
 }
