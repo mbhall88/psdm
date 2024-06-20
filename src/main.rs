@@ -5,10 +5,11 @@ use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{stdout, BufReader, BufWriter, Write};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use log::info;
 use log::LevelFilter;
 use noodles_fasta as fasta;
@@ -107,7 +108,7 @@ fn main() -> Result<()> {
 
     let mut ostream: Box<dyn Write> = match opts.output {
         None => Box::new(stdout()),
-        Some(p) => {
+        Some(ref p) => {
             let file = File::create(p).context("Failed to create output file")?;
             Box::new(BufWriter::new(file))
         }
@@ -131,7 +132,7 @@ fn main() -> Result<()> {
 
     let (names2, seqs2) = match opts.alignments.get(1) {
         Some(p) => {
-            let mut reader2 = niffler::from_path(&p)
+            let mut reader2 = niffler::from_path(p)
                 .map(|(r, _)| BufReader::new(r))
                 .map(fasta::Reader::new)
                 .context("Could not open second alignment file")?;
@@ -161,31 +162,47 @@ fn main() -> Result<()> {
             .collect(),
     };
 
-    let pb = if opts.show_progress {
-        let style = ProgressStyle::default_bar()
-            .template("[{pos}/{len} ({percent}%) comparisons] {bar:40} [ETA {eta_precise}]");
-        ProgressBar::new(pairwise_indices.len() as u64).with_style(style)
-    } else {
-        ProgressBar::hidden()
-    };
-    info!(
-        "Calculating {} pairwise distances...",
-        pairwise_indices.len()
-    );
+    let num_items = pairwise_indices.len();
+    let counter = Arc::new(AtomicUsize::new(0));
+    // make the progress interval every 50 pairwise operations or every 1%, whichever is smaller
+    let progress_interval = std::cmp::min((num_items as f64 / 100.0).ceil() as usize, 100);
+    info!("Calculating {num_items} pairwise distances...",);
     let dists: Vec<u64> = pairwise_indices
         .as_slice()
         .into_par_iter()
-        .progress_with(pb)
-        .map(|ix| {
+        .map_with(Arc::clone(&counter), |counter, ix| {
             let i = ix[0];
             let j = ix[1];
-            match &seqs2 {
+            let distance = match &seqs2 {
                 None if i == j => 0, // distance between a sequence and itself
                 None => hamming_distance(&seqs1[i], &seqs1[j]),
                 Some(ref s) => hamming_distance(&seqs1[i], &s[j]),
+            };
+
+            // Update the counter
+            let current_count = counter.fetch_add(1, Ordering::SeqCst) + 1;
+
+            // Optionally print progress every 1%
+            if opts.show_progress && current_count % progress_interval == 0 {
+                let progress = (current_count as f64 / num_items as f64) * 100.0;
+                eprint!(
+                    "\rProgress: {:.2}% ({} / {})",
+                    progress, current_count, num_items
+                );
+                match std::io::stderr().flush() {
+                    Ok(_) => (),
+                    Err(e) => eprintln!("Error occurred when flushing stderr: {:?}", e),
+                }
             }
+
+            distance
         })
         .collect();
+
+    // Finish the progress bar
+    if opts.show_progress {
+        eprintln!();
+    }
 
     let matrix =
         if n_seqs2 > 0 {
@@ -206,11 +223,11 @@ fn main() -> Result<()> {
         };
     info!("Finished computing distances");
 
-    let row_names: &Vec<String> = match &names2 {
+    let row_names: &Vec<Vec<u8>> = match &names2 {
         Some(n) => n,
         None => &names1,
     };
-    let col_names: &Vec<String> = &names1;
+    let col_names: &Vec<Vec<u8>> = &names1;
 
     if opts.long_form {
         info!("Writing long-form table...");

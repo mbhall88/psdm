@@ -19,13 +19,13 @@ maintenance = { status = "actively-developed" }
 clap = { version = "3.1", features = ["derive"] }
 anyhow = "1"
 niffler = "2.3"
-noodles-fasta = "0.3"
-itertools = "0.10"
-rayon = "1.5"
-indicatif = {version = "0.16", features = ["rayon"]}
+noodles-fasta = "0.40"
+itertools = "0.13"
+rayon = "1.10"
+indicatif = {version = "0.17", features = ["rayon"]}
 ndarray = "0.15"
 log = "0.4"
-env_logger = "0.9"
+env_logger = "0.11.3"
 
 [dev-dependencies]
 assert_cmd = "2"
