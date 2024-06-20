@@ -84,7 +84,7 @@ fi
 if [ -n "$triple" ]; then   
     URL="https://github.com/mbhall88/psdm/releases/download/${version}/psdm-${version}-${triple}.tar.gz"
     wget "$URL" -O - | tar -xzf -
-    ./psdm --help             
+    ./psdm-${version}-${triple}/psdm --help             
 fi
 ```
 
@@ -100,7 +100,7 @@ An example of downloading one of these binaries using `wget`
 $ version="0.3.0"
 $ URL="https://github.com/mbhall88/psdm/releases/download/${version}/psdm-${version}-x86_64-unknown-linux-musl.tar.gz"
 $ wget "$URL" -O - | tar -xzf -
-$ ./psdm --help
+$ ./psdm*/psdm --help
 ```
 
 If these binaries do not work on your system please raise an issue and I will
