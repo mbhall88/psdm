@@ -1,7 +1,7 @@
 [package]
 name = "psdm"
 description = "Compute a pairwise SNP distance matrix from one or two alignment(s)"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2018"
 authors = ["Michael Hall <michael@mbh.sh>"]
 repository = "https://github.com/mbhall88/psdm"
