@@ -4,6 +4,7 @@ use itertools::iproduct;
 use ndarray::{ArrayBase, Ix2, OwnedRepr};
 use noodles_fasta as fasta;
 use std::collections::HashSet;
+use std::fmt::Write as _;
 use std::io::{BufRead, Error, Write};
 use std::iter::FromIterator;
 
@@ -60,14 +61,16 @@ pub struct Transformer {
     ignored_chars: HashSet<u8>,
 }
 
+type NamesAndSeqs = (Vec<Vec<u8>>, Vec<Vec<u8>>);
+
 impl Transformer {
     pub fn load_alignment<R: BufRead>(
         &self,
         reader: &mut fasta::Reader<R>,
         starting_seqlen: usize,
-    ) -> Result<(Vec<String>, Vec<Vec<u8>>), anyhow::Error> {
+    ) -> Result<NamesAndSeqs, anyhow::Error> {
         let mut seqlen: usize = starting_seqlen;
-        let mut names: Vec<String> = vec![];
+        let mut names: Vec<Vec<u8>> = vec![];
         let mut seqs: Vec<Vec<u8>> = vec![];
 
         for result in reader.records() {
@@ -76,12 +79,13 @@ impl Transformer {
             if seqlen > 0 && seqlen != record.sequence().len() {
                 return Err(anyhow!(format!(
                     "Alignment sequences must all be the same length [id: {}]",
-                    record.name()
+                    String::from_utf8_lossy(record.name())
                 )));
             } else if seqlen == 0 {
                 seqlen = record.sequence().len();
             }
-            seqs.push(record.sequence().to_vec());
+            let seq = record.sequence().as_ref();
+            seqs.push(seq.to_vec());
         }
 
         if self.sort {
@@ -106,7 +110,7 @@ impl Transformer {
                 b.make_ascii_uppercase();
             }
             if self.ignored_chars.contains(b) {
-                *b = IGNORE.to_owned();
+                IGNORE.clone_into(b);
             }
         }
     }
@@ -125,15 +129,15 @@ pub trait ToTable {
         &self,
         ostream: &mut Box<dyn Write>,
         delimiter: char,
-        column_names: &[String],
-        row_names: &[String],
+        column_names: &[Vec<u8>],
+        row_names: &[Vec<u8>],
     ) -> Result<(), Error>;
     fn to_long(
         &self,
         ostream: &mut Box<dyn Write>,
         delimiter: char,
-        column_names: &[String],
-        row_names: &[String],
+        column_names: &[Vec<u8>],
+        row_names: &[Vec<u8>],
     ) -> Result<(), Error>;
 }
 
@@ -142,21 +146,25 @@ impl ToTable for ArrayBase<OwnedRepr<u64>, Ix2> {
         &self,
         ostream: &mut Box<dyn Write>,
         delimiter: char,
-        column_names: &[String],
-        row_names: &[String],
+        column_names: &[Vec<u8>],
+        row_names: &[Vec<u8>],
     ) -> Result<(), Error> {
         // write empty top-left corner cell
         write!(ostream, "{}", delimiter)?;
-        let header: String = column_names.to_vec().join(&delimiter.to_string());
+        let header = column_names
+            .iter()
+            .map(|x| String::from_utf8_lossy(x))
+            .collect::<Vec<_>>()
+            .join(&delimiter.to_string());
         writeln!(ostream, "{}", header)?;
 
         for (row_idx, row_name) in row_names.iter().enumerate() {
-            write!(ostream, "{}", row_name)?;
+            write!(ostream, "{}", String::from_utf8_lossy(row_name))?;
             let row = self.row(row_idx);
-            let s = row
-                .iter()
-                .map(|x| format!("{}{}", delimiter, x))
-                .collect::<String>();
+            let s = row.iter().fold(String::new(), |mut output, x| {
+                let _ = write!(output, "{}{}", delimiter, x);
+                output
+            });
             writeln!(ostream, "{}", s)?;
         }
         Ok(())
@@ -166,14 +174,21 @@ impl ToTable for ArrayBase<OwnedRepr<u64>, Ix2> {
         &self,
         ostream: &mut Box<dyn Write>,
         delimiter: char,
-        column_names: &[String],
-        row_names: &[String],
+        column_names: &[Vec<u8>],
+        row_names: &[Vec<u8>],
     ) -> Result<(), Error> {
         for (i, j) in iproduct!(0..column_names.len(), 0..row_names.len()) {
             let dist = self[[j, i]];
             let c_name = &column_names[i];
             let r_name = &row_names[j];
-            writeln!(ostream, "{}{d}{}{d}{}", c_name, r_name, dist, d = delimiter)?;
+            writeln!(
+                ostream,
+                "{}{d}{}{d}{}",
+                String::from_utf8_lossy(c_name),
+                String::from_utf8_lossy(r_name),
+                dist,
+                d = delimiter
+            )?;
         }
         Ok(())
     }
@@ -202,7 +217,7 @@ mod tests {
 
         let actual = t.load_alignment(&mut reader, 0).unwrap();
         let expected = (
-            vec!["s1".to_string(), "s0".to_string()],
+            vec![b"s1".to_vec(), b"s0".to_vec()],
             vec![b"ACGT".to_vec(), b"CCCC".to_vec()],
         );
 
@@ -240,7 +255,7 @@ mod tests {
 
         let actual = t.load_alignment(&mut reader, 0).unwrap();
         let expected = (
-            vec!["s0".to_string(), "s10".to_string(), "s51".to_string()],
+            vec![b"s0".to_vec(), b"s10".to_vec(), b"s51".to_vec()],
             vec![b"GGCC".to_vec(), b"ACGT".to_vec(), b"CCCC".to_vec()],
         );
         assert_eq!(actual, expected)
