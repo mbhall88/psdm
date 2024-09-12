@@ -1,4 +1,4 @@
-FROM rust:1.81.0 AS builder
+FROM rust:slim AS builder
 
 COPY . /psdm
 
